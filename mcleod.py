@@ -1,0 +1,405 @@
+import requests
+from requests.auth import HTTPBasicAuth
+from utils import get_state_abbreviation, convert_kgs_to_lb, format_date_time_for_mcleod
+
+
+def get_new_location_object(is_test) -> dict:
+    """"""
+    test_url = "https://dgld.loadtracking.com:5790/ws/locations/new"
+    prod_url = "https://dgld.loadtracking.com/ws/locations/new"
+    headers = {'Accept': 'application/json'}
+
+    print("Getting new location object")
+    if is_test:
+        response = requests.get(test_url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
+                                headers=headers)
+        print(f"Response is: {response.text}")
+        if response:
+            return response.json()
+    else:
+        response = requests.get(prod_url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
+                                headers=headers)
+        if response:
+            return response.json()
+
+
+def get_location(is_test, address1: str = None, city: str = None, state: str = None, zip_code: str = None) -> list:
+    """"""
+    url = ""
+    print(f"Get location for address: {address1}, city: {city}, state: {state}, zip: {zip_code}")
+    test_url = "https://dgld.loadtracking.com:5790/ws/locations/search?"
+    prod_url = "https://dgld.loadtracking.com/ws/locations/search?"
+
+    if is_test:
+        url = test_url
+    else:
+        url = prod_url
+
+    headers = {'Accept': 'application/json'}
+    if not address1 and not city and not state and not zip_code:
+        return url[:-1]
+    if address1:
+        url += f"address1={address1}"
+    if city:
+        if not address1:
+            url += f"city_name={city}"
+        else:
+            url += f"&city_name={city}"
+    if zip_code:
+        if url[-1] == '?':
+            url += f"zip_code={zip_code}"
+        else:
+            url += f"&zip_code={zip_code}"
+    if state:
+        st = ""
+        if len(state) > 2:
+            st = get_state_abbreviation(state)
+        else:
+            st = state
+        if url[-1] == '?':
+            url += f"state={state}"
+        else:
+            url += f"&state={state}"
+
+    print(f"Searching for address: {url}")
+    response = requests.get(url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
+                            headers=headers)
+
+    print(f"response for location search is: {response.text}")
+    if response:
+        return response.json()
+
+
+def save_new_location(is_test, location):
+    """"""
+    print(f"Received location: {location}")
+    test_url = "https://dgld.loadtracking.com:5790/ws/locations/create"
+    prod_url = "https://dgld.loadtracking.com/ws/locations/create"
+    headers = {'Accept': 'application/json'}
+    if is_test:
+        response = requests.put(test_url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
+                                headers=headers, json=location)
+        print(response.text)
+    else:
+        response = requests.put(prod_url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
+                                headers=headers, json=location)
+    print(f"Returning location: {response.json()}")
+    return response.json()
+
+
+def save_order(pickup_list, delivery_list, is_test, booking=None):
+    test_url = "https://dgld.loadtracking.com:5790/ws/orders/create"
+    prod_url = "https://dgld.loadtracking.com/ws/orders/create"
+
+    headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
+
+    stops = []
+    stop_comments = {}
+    reference_numbers = {}
+    stop_weights = {}
+    stop_pieces = {}
+    for pickup in pickup_list:
+        pickup_location_id = None
+        pickup_city_id = None
+        pickup_location = get_location(is_test, pickup.address, pickup.city,
+                                       pickup.state, pickup.postal)
+        print(f"pickup is: {pickup_location}")
+        if pickup_location:
+            pickup_location_id = pickup_location[0]['id']
+            pickup_city_id = pickup_location[0]['city_id']
+        else:
+            st = ""
+            if len(pickup.state) > 2:
+                st = get_state_abbreviation(pickup.state)
+            else:
+                st = pickup.state
+            new_location = {'__type': 'location', 'name': f"{pickup.address} {pickup.city}",
+                            'city_name': pickup.city, 'state': st,
+                            'address1': pickup.address, 'zip_code': pickup.postal}
+
+            print(f"Saving pickup: {new_location}")
+            pickup_location = save_new_location(is_test, new_location)
+            pickup_location_id = pickup_location['id']
+            pickup_city_id = pickup_location['city_id']
+            print("Saved pickup")
+
+        sched_arrive_early_pu = format_date_time_for_mcleod(pickup.est_dt)
+        pickup_object = {
+                            "__type": "stop",
+                            "location_name": pickup.company,
+                            "contact_name": pickup.contact_name,
+                            "phone": pickup.contact_phone,
+                            "company_id": "TMS",
+                            "address": pickup.address,
+                            "location_id": pickup_location_id,
+                            "sched_arrive_early": sched_arrive_early_pu,
+                            "stop_type": "PU"
+                        }
+        stops.append(pickup_object)
+        stop_comment_key = f"{pickup_city_id}{pickup_location_id}"
+        reference_numbers[stop_comment_key] = pickup.ref_booking_number
+
+    total_weight = 0
+    total_pieces_count = 0
+    do_numbers = []
+    for delivery in delivery_list:
+        do_numbers.append(delivery.do_number)
+        delivery_city_id = None
+        delivery_location_id = None
+        delivery_location = get_location(is_test, delivery.address, delivery.city,
+                                         delivery.state, delivery.postal)
+        print(f"delivery is: {delivery_location}")
+        if delivery_location:
+            delivery_city_id = delivery_location[0]['city_id']
+            delivery_location_id = delivery_location[0]['id']
+        else:
+            st = ""
+            if len(delivery.state) > 2:
+                st = get_state_abbreviation(delivery.state)
+            else:
+                st = delivery.state
+            new_location = {'__type': 'location', 'name': f"{delivery.address} {delivery.city}",
+                            'city_name': delivery.city, 'state': st,
+                            'address1': delivery.address, 'zip_code': delivery.postal}
+            print(f"Saving delivery: {new_location}")
+            delivery_location = save_new_location(is_test, new_location)
+            delivery_city_id = delivery_location['city_id']
+            delivery_location_id = delivery_location['id']
+            print("Saved delivery")
+
+        sched_arrive_early_del = format_date_time_for_mcleod(delivery.est_dt)
+        delivery_object = {
+                                "__type": "stop",
+                                "location_name": delivery.company,
+                                "company_id": "TMS",
+                                "address": delivery.address,
+                                "city_name": delivery.city,
+                                "city_id": delivery_city_id,
+                                "location_id": delivery_location_id,
+                                "state": delivery.state,
+                                "contact_name": delivery.contact_name,
+                                "phone": delivery.contact_phone,
+                                "sched_arrive_early": sched_arrive_early_del,
+                                "weight": convert_kgs_to_lb(delivery.total_weight_kgs),
+                                "cases": delivery.total_piece_count,
+                                "volume": round(delivery.total_volume_cbm, 1),
+                                "stop_type": "SO",
+                                "zip_code": delivery.postal
+                            }
+
+        total_weight += convert_kgs_to_lb(delivery.total_weight_kgs)
+        total_pieces_count += delivery.total_piece_count
+        stops.append(delivery_object)
+        stop_comment_key = f"{delivery_city_id}{delivery_location_id}"
+        stop_comments[stop_comment_key] = delivery.remarks
+        reference_numbers[stop_comment_key] = delivery.ref_booking_number
+        stop_weights[stop_comment_key] = convert_kgs_to_lb(delivery.total_weight_kgs)
+        stop_pieces[stop_comment_key] = delivery.total_piece_count
+    teams_required = 'N'
+    equipment_type_id = 'V'
+
+    if booking.driver_type.strip().lower() == "team driver":
+        teams_required = 'Y'
+        equipment_type_id = 'VM'
+    blnum = ":".join(do_numbers)
+    request_object = {
+        "__type": "orders",
+        "company_id": "TMS",
+        "collection_method": "T",
+        "customer_id": "APEXELIL",
+        "revenue_code_id": "FF",
+        "teams_required": teams_required,
+        "equipment_type_id": equipment_type_id,
+        "commodity_id": "ELECTRONI",
+        "order_type_id": "SPOT",
+        "stops": stops,
+        "entered_user_id": "apiuser",
+        "consignee_refno": booking.customer_reference_number,
+        "blnum": blnum,
+        "weight": total_weight,
+        "pieces": total_pieces_count
+    }
+
+    response = None
+    if is_test:
+        response = requests.put(test_url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
+                                headers=headers, json=request_object)
+        save_delivery_notes(response, stop_comments, is_test)
+        save_reference_number(response, reference_numbers, stop_weights, stop_pieces, is_test)
+    else:
+        response = requests.put(prod_url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
+                                headers=headers, json=request_object)
+        save_delivery_notes(response, stop_comments, is_test)
+        save_reference_number(response, reference_numbers, stop_weights, stop_pieces, is_test)
+
+    return response.json()
+
+
+def save_delivery_notes(response, stop_comments, is_test):
+
+    test_url = "https://dgld.loadtracking.com:5790/ws/stop_note/create"
+    prod_url = "https://dgld.loadtracking.com/ws/stop_note/create"
+
+    headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
+    for stp in response.json()['stops']:
+        if stp['stop_type'] == "SO":
+            key_stop = f"{stp['city_id']}{stp['location_id']}"
+            if key_stop in stop_comments:
+                request_object = {
+                    "__type": "stop_note",
+                    "company_id": "TMS",
+                    "comment_type": "OC",
+                    "comments": stop_comments[key_stop],
+                    "sequence": 1,
+                    "stop_id": stp['id'],
+                    "system_added": False
+                }
+                if is_test:
+                    requests.put(test_url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
+                                 headers=headers, json=request_object)
+                    print(f"Saved delivery note: {request_object}")
+
+                else:
+                    requests.put(prod_url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
+                                 headers=headers, json=request_object)
+                    print(f"Saved delivery note: {request_object}")
+
+
+def get_order(is_test, order_id):
+    headers = {'Accept': 'application/json'}
+    order = None
+    url = None
+    if is_test:
+        url = f"https://dgld.loadtracking.com:5790/ws/orders/{order_id}"
+        order = requests.get(url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
+                                 headers=headers)
+    else:
+        url = f"https://dgld.loadtracking.com/ws/orders/{order_id}"
+        order = requests.get(url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
+                             headers=headers)
+    return order.json()
+
+
+def get_edi_partner_code(is_test, reference_number):
+    headers = {'Accept': 'application/json'}
+    url = None
+    test_url = "https://dgld.loadtracking.com:5790/ws/edi_partner_code/search?"
+    prod_url = "https://dgld.loadtracking.com/ws/edi_partner_code/search?"
+
+    if not reference_number:
+        return ""
+
+    reference_number_code = reference_number[0:2].upper()
+    if is_test:
+        url = test_url
+    else:
+        url = prod_url
+
+    url += f"standard_code={reference_number_code}"
+
+    print(f"Searching for edi partner code: {url}")
+    response = requests.get(url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
+                            headers=headers)
+
+    print(f"Edi partner code response is: {response.json()}")
+    return response.json()
+
+
+def save_reference_number(response, reference_numbers, stop_weights, stop_pieces, is_test):
+    test_url = "https://dgld.loadtracking.com:5790/ws/reference_number/create"
+    prod_url = "https://dgld.loadtracking.com/ws/reference_number/create"
+    headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
+
+    for stp in response.json()['stops']:
+        # if stp['stop_type'] == "SO":
+        key_stop = f"{stp['city_id']}{stp['location_id']}"
+
+        reference_number = None
+        if key_stop in reference_numbers:
+            reference_number = reference_numbers[key_stop]
+
+        edi_partner_code = get_edi_partner_code(is_test, reference_number)
+        if edi_partner_code and len(edi_partner_code) > 0:
+            element_id = edi_partner_code[0]['element_id']
+            version = edi_partner_code[0]['version']
+            ref_qual_description = edi_partner_code[0]['description']
+            request_object = {
+                "__type": "reference_number",
+                "company_id": "TMS",
+                "element_id": element_id,
+                "partner_id": "TMS",
+                "reference_number": reference_number,
+                "reference_qual": reference_number[0:2].upper(),
+                "send_to_driver": False,
+                "stop_id": stp['id'],
+                "version": version,
+                "__referenceQualDescr": ref_qual_description
+            }
+
+            if key_stop in stop_weights:
+                weight = stop_weights[key_stop]
+                request_object['weight'] = weight
+
+            if key_stop in stop_pieces:
+                pieces = stop_pieces[key_stop]
+                request_object['pieces'] = pieces
+
+            if is_test:
+                requests.put(test_url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
+                             headers=headers, json=request_object)
+                print(f"Saved reference number: {request_object}")
+
+            else:
+                requests.put(prod_url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
+                             headers=headers, json=request_object)
+                print(f"Saved reference number: {request_object}")
+
+
+def get_customer_by_name(is_test: bool, name: str):
+    """"""
+    url = None
+    test_url = "https://dgld.loadtracking.com:5790/ws/customers/search?"
+    prod_url = "https://dgld.loadtracking.com/ws/customers/search?"
+    headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
+
+    if is_test:
+        url = f"{test_url}name={name}"
+
+    else:
+        url = f"{prod_url}name={name}"
+
+    print(f"Searching for customer: {url}")
+    response = requests.get(url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
+                            headers=headers)
+
+    print(f"Customer response is: {response.json()}")
+    return response.json()
+
+
+def save_customer(is_test: bool, name: str):
+    """"""
+    test_url = "https://dgld.loadtracking.com:5790/ws/customers/create"
+    prod_url = "https://dgld.loadtracking.com/ws/customers/create"
+    headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
+
+    request_object = {
+        "__type": "customer",
+        "company_id": "TMS",
+        "name": name
+    }
+
+    if is_test:
+        response = requests.put(test_url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
+                                headers=headers, json=request_object)
+
+    else:
+        response = requests.put(prod_url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
+                                headers=headers, json=request_object)
+
+    print(f"Saved customer: {response.json()}")
+    return response.json()
+
+
+if __name__ == "__main__":
+    # print(get_customer_by_name(True, "apex logistics international jfk"))
+    print(save_customer(True, "DGLTms Integration Test Customer"))
