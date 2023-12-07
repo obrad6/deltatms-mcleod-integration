@@ -105,7 +105,7 @@ def post_order():
         delivery_city = delivery['city']
         delivery_state = delivery['state']
         delivery_country = delivery['country']
-        delivery_zip_code = delivery['zipCode']
+        delivery_zip_code = delivery['zip_code']
         delivery_est_dt = delivery['est_deliver_date_time']
 
         #TODO: Figure oout bellow fields in DeltaTMS

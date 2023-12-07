@@ -22,6 +22,8 @@ tags:
     description: "Authentication and Authorization API Endpoints."
   - name: "Customers"
     description: "Customers API Endpoints"
+  - name: "Orders"
+    description: "Orders API Endpoints."
 
 
 paths:
@@ -92,6 +94,43 @@ paths:
           description: "Create Customer Server Error."
           schema:
             $ref: "#/definitions/FailedCreateCustomer500Response"
+
+  /orders:
+    post:
+      tags:
+        - "Orders"
+      security:
+        - Bearer: [ ]
+      summary: "Create customer"
+      description: "Create new customer."
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "Create order request object."
+          required: true
+          schema:
+            $ref: "#/definitions/OrderRequest"
+      responses:
+        201:
+          description: "Order successfully created."
+          schema:
+            $ref: "#/definitions/CreateOrder201Success"
+        400:
+          description: "Create Order Client Error."
+          schema:
+            $ref: "#/definitions/FailedCreateOrder400Response"
+        422:
+          description: "Create Order Validation Client Error."
+          schema:
+            $ref: "#/definitions/FailedCreateOrder422Response"
+        500:
+          description: "Create Order Server Error."
+          schema:
+            $ref: "#/definitions/FailedCreateOrder500Response"
 
 definitions:
   AuthClientRequest:
@@ -216,6 +255,154 @@ definitions:
       message:
         type: "string"
         example: "Unable to save customer: Test Customer"
+      success:
+        type: "boolean"
+        example: false
+
+  OrderRequest:
+    type: "object"
+    required:
+      - "external_customer_id"
+      - "mode"
+      - "billing_number"
+      - "pickup_list"
+      - "delivery_list"
+    properties:
+      external_customer_id:
+        type: "string"
+        example: "TESTCUST"
+      mode:
+        type: "string"
+        example: "Van 53"
+      billing_number:
+        type: "string"
+        example: "1231234313"
+      pickup_list:
+        type: "array"
+        items:
+          $ref: "#/definitions/Pickup"
+      delivery_list:
+        type: "array"
+        items:
+          $ref: "#/definitions/Delivery"
+
+  Pickup:
+    type: "object"
+    required:
+      - "address"
+      - "city"
+      - "state"
+      - "country"
+      - "zip_code"
+      - "est_pickup_date_time"
+      - "weight"
+      - "package_count"
+    properties:
+      pickup_address:
+        type: "string"
+        example: "1555 Lincoln Ave"
+      pickup_city:
+        type: "string"
+        example: "Chicago"
+      pickup_state:
+        type: "string"
+        example: "IL"
+      pickup_country:
+        type: "string"
+        example: "USA"
+      pickup_zip_code:
+        type: "string"
+        example: "60601"
+      est_pickup_date_time:
+        type: "string"
+        example: "2023-07-09 11:00:00"
+      weight:
+        type: number
+        example: 42000.50
+      package_count:
+        type: integer
+        example: 24
+
+  Delivery:
+    type: "object"
+    required:
+      - "address"
+      - "city"
+      - "state"
+      - "country"
+      - "zip_code"
+      - "est_deliver_date_time"
+    properties:
+      pickup_address:
+        type: "string"
+        example: "606 W Van Alden Ave"
+      pickup_city:
+        type: "string"
+        example: "Chicago"
+      pickup_state:
+        type: "string"
+        example: "IL"
+      pickup_country:
+        type: "string"
+        example: "USA"
+      pickup_zip_code:
+        type: "string"
+        example: "60016"
+      est_deliver_date_time:
+        type: "string"
+        example: "2023-07-12 11:00:00"
+
+  FailedCreateOrder400Response:
+    type: "object"
+    properties:
+      status_code:
+        type: "integer"
+        example: 400
+      message:
+        type: "string"
+        example: "Please provide required info."
+      success:
+        type: "boolean"
+        example: false
+
+  FailedCreateOrder422Response:
+    type: "object"
+    properties:
+      status_code:
+        type: "integer"
+        example: 422
+      message:
+        type: "string"
+        example: "Pickup ZIP Code for Chicago, IL is invalid."
+      success:
+        type: "boolean"
+        example: false
+
+  CreateOrder201Success:
+    type: "object"
+    properties:
+      status_code:
+        type: "integer"
+        example: 201
+      message:
+        type: "string"
+        example: "Order saved successfully."
+      success:
+        type: "boolean"
+        example: true
+      mc_leod_number:
+        type: "string"
+        example: "123401"
+
+  FailedCreateOrder500Response:
+    type: "object"
+    properties:
+      status_code:
+        type: "integer"
+        example: 500
+      message:
+        type: "string"
+        example: "Failed to save order.\nError:\n{str(e)}"
       success:
         type: "boolean"
         example: false
