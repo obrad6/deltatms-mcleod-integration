@@ -101,8 +101,8 @@ paths:
         - "Orders"
       security:
         - Bearer: [ ]
-      summary: "Create customer"
-      description: "Create new customer."
+      summary: "Create orders"
+      description: "Create new order."
       consumes:
         - "application/json"
       produces:
