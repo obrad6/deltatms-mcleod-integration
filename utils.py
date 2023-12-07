@@ -150,3 +150,20 @@ def format_date_time_for_mcleod(dt: str) -> str:
     year = date_string.split('-')[0]
     time_string = date_and_time[1]
     return f"{month}/{day}/{year} {time_string}"
+
+
+def get_mcleod_equipment_type_id(mode: str) -> [bool, str]:
+    """Get McLEod equipment type id based on the equipment type string received"""
+    equipment_type_ids = {"Conestoga": "CN", "Flatbed": "F", "Flatbed Tarps": "FT", "Flatbed Team": "FM", "Reefer": "R",
+                          "Reefer Team": "RM", "Sprinter Van": "SPR", "Step Deck": "SD", "Straight Box Truck": "SB",
+                          "Van 48": "V", "Van 48 Team": "VM", "Van 53": "V", "Van 53 Team": "VM"}
+    if mode not in equipment_type_ids:
+        return False, ''
+    return True, equipment_type_ids[mode]
+
+
+def is_team_required_based_on_the_equipment(equipment_type_id: str) -> bool:
+    """Get boolean flag if team is required or not based on the McLeod equipment type id."""
+    if equipment_type_id[-1] == 'M':
+        return True
+    return False

@@ -1,6 +1,7 @@
 import requests
 from requests.auth import HTTPBasicAuth
-from utils import get_state_abbreviation, convert_kgs_to_lb, format_date_time_for_mcleod
+from utils import get_state_abbreviation, convert_kgs_to_lb, format_date_time_for_mcleod,\
+    get_mcleod_equipment_type_id, is_team_required_based_on_the_equipment
 
 
 def get_new_location_object(is_test) -> dict:
@@ -87,135 +88,154 @@ def save_new_location(is_test, location):
     return response.json()
 
 
-def save_order(pickup_list, delivery_list, is_test, booking=None):
+def save_order(pickup_list, delivery_list, is_test, order=None):
     test_url = "https://dgld.loadtracking.com:5790/ws/orders/create"
     prod_url = "https://dgld.loadtracking.com/ws/orders/create"
 
     headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
 
     stops = []
-    stop_comments = {}
-    reference_numbers = {}
-    stop_weights = {}
-    stop_pieces = {}
+    # stop_comments = {}
+    # reference_numbers = {}
+    # stop_weights = {}
+    # stop_pieces = {}
+
+    total_weight = 0
+    total_pieces_count = 0
+    # PICKUP
     for pickup in pickup_list:
+        total_weight += pickup['weight']
+        total_pieces_count += pickup['package_count']
+
         pickup_location_id = None
         pickup_city_id = None
-        pickup_location = get_location(is_test, pickup.address, pickup.city,
-                                       pickup.state, pickup.postal)
+        pickup_location = get_location(is_test, pickup['pickup_address'], pickup['pickup_city'],
+                                       pickup['pickup_state'], pickup['pickup_zip_code'])
         print(f"pickup is: {pickup_location}")
         if pickup_location:
             pickup_location_id = pickup_location[0]['id']
             pickup_city_id = pickup_location[0]['city_id']
+            pickup_location_name = pickup_location[0]['name']
         else:
             st = ""
-            if len(pickup.state) > 2:
-                st = get_state_abbreviation(pickup.state)
+            if len(pickup['pickup_state']) > 2:
+                st = get_state_abbreviation(pickup['pickup_state'])
             else:
-                st = pickup.state
-            new_location = {'__type': 'location', 'name': f"{pickup.address} {pickup.city}",
-                            'city_name': pickup.city, 'state': st,
-                            'address1': pickup.address, 'zip_code': pickup.postal}
+                st = pickup['pickup_state']
+            new_location = {'__type': 'location', 'name': f"{pickup['pickup_address']} {pickup['pickup_city']}",
+                            'city_name': pickup['pickup_city'], 'state': st,
+                            'address1': pickup['pickup_address'], 'zip_code': pickup['pickup_zip_code']}
 
-            print(f"Saving pickup: {new_location}")
+            print(f"Saving pickup location: {new_location}")
             pickup_location = save_new_location(is_test, new_location)
+            print("Saved pickup location")
             pickup_location_id = pickup_location['id']
             pickup_city_id = pickup_location['city_id']
-            print("Saved pickup")
+            pickup_location_name = pickup_location['name']
 
-        sched_arrive_early_pu = format_date_time_for_mcleod(pickup.est_dt)
+        sched_arrive_early_pu = format_date_time_for_mcleod(pickup['pickup_est_dt'])
         pickup_object = {
                             "__type": "stop",
-                            "location_name": pickup.company,
-                            "contact_name": pickup.contact_name,
-                            "phone": pickup.contact_phone,
+                            "location_name": pickup_location_name,
+                            # "contact_name": pickup.contact_name,
+                            # "phone": pickup.contact_phone,
                             "company_id": "TMS",
-                            "address": pickup.address,
+                            "address": pickup['pickup_address'],
                             "location_id": pickup_location_id,
                             "sched_arrive_early": sched_arrive_early_pu,
+                            "weight": pickup['weight'],
+                            "cases": pickup['package_count'],
                             "stop_type": "PU"
                         }
         stops.append(pickup_object)
-        stop_comment_key = f"{pickup_city_id}{pickup_location_id}"
-        reference_numbers[stop_comment_key] = pickup.ref_booking_number
+        # stop_comment_key = f"{pickup_city_id}{pickup_location_id}"
+        # reference_numbers[stop_comment_key] = pickup.ref_booking_number
+    #
+    # total_weight = 0
+    # total_pieces_count = 0
+    # do_numbers = []
 
-    total_weight = 0
-    total_pieces_count = 0
-    do_numbers = []
+    # DELIVERY
     for delivery in delivery_list:
-        do_numbers.append(delivery.do_number)
+        # do_numbers.append(delivery.do_number)
         delivery_city_id = None
         delivery_location_id = None
-        delivery_location = get_location(is_test, delivery.address, delivery.city,
-                                         delivery.state, delivery.postal)
+        delivery_location = get_location(is_test, delivery['delivery_address'], delivery['delivery_city'],
+                                         delivery['delivery_state'], delivery['delivery_zip_code'])
         print(f"delivery is: {delivery_location}")
         if delivery_location:
             delivery_city_id = delivery_location[0]['city_id']
             delivery_location_id = delivery_location[0]['id']
+            delivery_location_name = delivery_location[0]['name']
         else:
             st = ""
-            if len(delivery.state) > 2:
-                st = get_state_abbreviation(delivery.state)
+            if len(delivery['delivery_state']) > 2:
+                st = get_state_abbreviation(delivery['delivery_state'])
             else:
-                st = delivery.state
-            new_location = {'__type': 'location', 'name': f"{delivery.address} {delivery.city}",
-                            'city_name': delivery.city, 'state': st,
-                            'address1': delivery.address, 'zip_code': delivery.postal}
+                st = delivery['delivery_state']
+            new_location = {'__type': 'location', 'name': f"{delivery['delivery_address']} {delivery['delivery_city']}",
+                            'city_name': delivery['delivery_city'], 'state': st,
+                            'address1': delivery['delivery_address'], 'zip_code': delivery['delivery_zip_code']}
             print(f"Saving delivery: {new_location}")
             delivery_location = save_new_location(is_test, new_location)
+            print("Saved delivery")
             delivery_city_id = delivery_location['city_id']
             delivery_location_id = delivery_location['id']
-            print("Saved delivery")
+            delivery_location_name = delivery_location[0]['name']
 
-        sched_arrive_early_del = format_date_time_for_mcleod(delivery.est_dt)
+        sched_arrive_early_del = format_date_time_for_mcleod(delivery['delivery_est_dt'])
         delivery_object = {
                                 "__type": "stop",
-                                "location_name": delivery.company,
+                                "location_name": delivery_location_name,
                                 "company_id": "TMS",
-                                "address": delivery.address,
-                                "city_name": delivery.city,
+                                "address": delivery['delivery_address'],
+                                "city_name": delivery['delivery_city'],
                                 "city_id": delivery_city_id,
                                 "location_id": delivery_location_id,
-                                "state": delivery.state,
-                                "contact_name": delivery.contact_name,
-                                "phone": delivery.contact_phone,
+                                "state": delivery['delivery_state'],
+                                "zip_code": delivery['delivery_zip_code'],
+                                # "contact_name": delivery.contact_name,
+                                # "phone": delivery.contact_phone,
                                 "sched_arrive_early": sched_arrive_early_del,
-                                "weight": convert_kgs_to_lb(delivery.total_weight_kgs),
-                                "cases": delivery.total_piece_count,
-                                "volume": round(delivery.total_volume_cbm, 1),
-                                "stop_type": "SO",
-                                "zip_code": delivery.postal
+                                # "weight": convert_kgs_to_lb(delivery.total_weight_kgs),
+                                # "cases": delivery.total_piece_count,
+                                # "volume": round(delivery.total_volume_cbm, 1),
+                                "stop_type": "SO"
                             }
 
-        total_weight += convert_kgs_to_lb(delivery.total_weight_kgs)
-        total_pieces_count += delivery.total_piece_count
         stops.append(delivery_object)
-        stop_comment_key = f"{delivery_city_id}{delivery_location_id}"
-        stop_comments[stop_comment_key] = delivery.remarks
-        reference_numbers[stop_comment_key] = delivery.ref_booking_number
-        stop_weights[stop_comment_key] = convert_kgs_to_lb(delivery.total_weight_kgs)
-        stop_pieces[stop_comment_key] = delivery.total_piece_count
-    teams_required = 'N'
-    equipment_type_id = 'V'
+        # total_weight += convert_kgs_to_lb(delivery.total_weight_kgs)
+        # total_pieces_count += delivery.total_piece_count
+        # stop_comment_key = f"{delivery_city_id}{delivery_location_id}"
+        # stop_comments[stop_comment_key] = delivery.remarks
+        # reference_numbers[stop_comment_key] = delivery.ref_booking_number
+        # stop_weights[stop_comment_key] = convert_kgs_to_lb(delivery.total_weight_kgs)
+        # stop_pieces[stop_comment_key] = delivery.total_piece_count
+    # teams_required = 'N'
+    # equipment_type_id = 'V'
 
-    if booking.driver_type.strip().lower() == "team driver":
-        teams_required = 'Y'
-        equipment_type_id = 'VM'
-    blnum = ":".join(do_numbers)
+    # if order.driver_type.strip().lower() == "team driver":
+    #     teams_required = 'Y'
+    #     equipment_type_id = 'VM'
+    # blnum = ":".join(do_numbers)
+
+    equipment_type_id = get_mcleod_equipment_type_id(order['mode'])
+    teams_required = 'Y' if is_team_required_based_on_the_equipment(equipment_type_id) else 'N'
+
     request_object = {
         "__type": "orders",
         "company_id": "TMS",
         "collection_method": "T",
-        "customer_id": "APEXELIL",
-        "revenue_code_id": "FF",
+        "customer_id": order['external_customer_id'],
+        "revenue_code_id": "NORM",
         "teams_required": teams_required,
         "equipment_type_id": equipment_type_id,
-        "commodity_id": "ELECTRONI",
+        # "commodity_id": "ELECTRONI",
         "order_type_id": "SPOT",
         "stops": stops,
         "entered_user_id": "apiuser",
-        "consignee_refno": booking.customer_reference_number,
-        "blnum": blnum,
+        "consignee_refno": order['billing_number'],
+        # "blnum": blnum,
         "weight": total_weight,
         "pieces": total_pieces_count
     }
@@ -224,13 +244,13 @@ def save_order(pickup_list, delivery_list, is_test, booking=None):
     if is_test:
         response = requests.put(test_url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
                                 headers=headers, json=request_object)
-        save_delivery_notes(response, stop_comments, is_test)
-        save_reference_number(response, reference_numbers, stop_weights, stop_pieces, is_test)
+        # save_delivery_notes(response, stop_comments, is_test)
+        # save_reference_number(response, reference_numbers, stop_weights, stop_pieces, is_test)
     else:
         response = requests.put(prod_url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
                                 headers=headers, json=request_object)
-        save_delivery_notes(response, stop_comments, is_test)
-        save_reference_number(response, reference_numbers, stop_weights, stop_pieces, is_test)
+        # save_delivery_notes(response, stop_comments, is_test)
+        # save_reference_number(response, reference_numbers, stop_weights, stop_pieces, is_test)
 
     return response.json()
 

@@ -47,25 +47,28 @@ def post_order():
     data = request.get_json()
     pickup_list = []
     delivery_list = []
+    is_test = True if "test" in data and data["test"] else False
 
-    if 'customerName' not in data or 'pickupList' not in data or 'deliveryList' not in data or \
-            not data['customerName'] or not data['pickupList'] or not data['deliveryList']:
+    if 'external_customer_id' not in data or 'pickup_list' not in data or 'delivery_list' not in data or \
+            'mode' not in data or 'billing_number' not in data or not data['external_customer_id'] or \
+            not data['pickup_list'] or not data['delivery_list'] or not data['mode'] or not data['billing_number']:
         response_object = {'status_code': 400,
-                           'message': 'Please provide customerName, pickupList and deliveryList.',
+                           'message': 'Please provide required info.',
                            'success': False}
         response = make_response(jsonify(response_object))
         response.status_code = 400
         return response
 
-    customer_name = data['customerName']
-
-    for pickup in data['pickupList']:
+    # PICKUP
+    for pickup in data['pickup_list']:
         pickup_address = pickup['address']
         pickup_city = pickup['city']
         pickup_state = pickup['state']
         pickup_country = pickup['country']
-        pickup_zip_code = pickup['zipCode']
-        pickup_est_dt = pickup['estPickupDateTime']
+        pickup_zip_code = pickup['zip_code']
+        pickup_est_dt = pickup['est_pickup_date_time']
+        pickup_weight = pickup['weight']
+        pickup_package_count = pickup['package_count']
 
         # TODO: Figure out bellow fields in DeltaTMS
         # pickup_contact_name = pickup['contactName']
@@ -90,18 +93,20 @@ def post_order():
             'pickup_state': pickup_state,
             'pickup_country': pickup_country,
             'pickup_zip_code': pickup_zip_code,
-            'pickup_est_dt': pickup_est_dt
+            'pickup_est_dt': pickup_est_dt,
+            'weight': pickup_weight,
+            'package_count': pickup_package_count
         }
-
         pickup_list.append(pickup_object)
 
-    for delivery in data['deliveryList']:
+    # DELIVERY
+    for delivery in data['delivery_list']:
         delivery_address = delivery['address']
         delivery_city = delivery['city']
         delivery_state = delivery['state']
         delivery_country = delivery['country']
         delivery_zip_code = delivery['zipCode']
-        delivery_est_dt = delivery['estDeliverDateTime']
+        delivery_est_dt = delivery['est_deliver_date_time']
 
         #TODO: Figure oout bellow fields in DeltaTMS
 
@@ -141,17 +146,13 @@ def post_order():
         delivery_list.append(delivery_object)
 
         order_object = {
-            'customer_name': customer_name,
-            'container_number': '',
-            'driver_type': 'Single Driver',
-            'container_or_trailer': False,
-            'service_level': "FTL",
-            'customer_reference_number': "",
-            'remarks': None
+            'external_customer_id': data['external_customer_id'],
+            'mode': data['mode'],
+            'billing_number': data['billing_number']
         }
         try:
-            order = save_order(pickup_list, delivery_list, True, order_object)
-            print(f"order is: {order}")
+            order = save_order(pickup_list, delivery_list, is_test, order_object)
+            print(f"order response is: {order}")
             if order:
                 mc_leod_number = order['id']
                 response_object = {
