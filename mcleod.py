@@ -178,7 +178,7 @@ def save_order(pickup_list, delivery_list, is_test, order=None):
                             'address1': delivery['delivery_address'], 'zip_code': delivery['delivery_zip_code']}
             print(f"Saving delivery: {new_location}")
             delivery_location = save_new_location(is_test, new_location)
-            print("Saved delivery")
+            print(f"delivery location is: {delivery_location}")
             delivery_city_id = delivery_location['city_id']
             delivery_location_id = delivery_location['id']
             delivery_location_name = delivery_location[0]['name']
@@ -202,7 +202,7 @@ def save_order(pickup_list, delivery_list, is_test, order=None):
                                 # "volume": round(delivery.total_volume_cbm, 1),
                                 "stop_type": "SO"
                             }
-
+        print(f"Adding delivery object to stops: {delivery_object}")
         stops.append(delivery_object)
         # total_weight += convert_kgs_to_lb(delivery.total_weight_kgs)
         # total_pieces_count += delivery.total_piece_count
@@ -242,13 +242,17 @@ def save_order(pickup_list, delivery_list, is_test, order=None):
 
     response = None
     if is_test:
+        print(f"Sending order request object: {request_object} in test: {is_test}")
         response = requests.put(test_url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
                                 headers=headers, json=request_object)
+        print(f"Response for save order is: {response.text} in test: {is_test}")
         # save_delivery_notes(response, stop_comments, is_test)
         # save_reference_number(response, reference_numbers, stop_weights, stop_pieces, is_test)
     else:
+        print(f"Sending order request object: {request_object} in test: {is_test}")
         response = requests.put(prod_url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
                                 headers=headers, json=request_object)
+        print(f"Response for save order is: {response.text} in test: {is_test}")
         # save_delivery_notes(response, stop_comments, is_test)
         # save_reference_number(response, reference_numbers, stop_weights, stop_pieces, is_test)
 
