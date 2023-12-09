@@ -1,5 +1,8 @@
 import requests
 import json
+import string
+
+from mcleod import get_customer_by_name, get_customers_by_query_string
 
 
 def get_states() -> list:
@@ -130,11 +133,12 @@ def create_customer(customer: dict, address: dict) -> bool:
         if 'tier' in customer:
             request_object['tier'] = customer['tier']
         print(f"Sending request: {request_object}")
-        response = requests.post(url, data=json.dumps(request_object), headers=headers, auth=('Misko', 'VoziM1$k0'))
-        if response.status_code != 200:
-            print(f"Failed to create new customer. Response: {response.text}")
-            return False
-        return True
+        if not get_customer_by_external_id(customer['externaL_id']):
+            response = requests.post(url, data=json.dumps(request_object), headers=headers, auth=('Misko', 'VoziM1$k0'))
+            if response.status_code != 200:
+                print(f"Failed to create new customer. Response: {response.text}")
+                return False
+            return True
     except Exception as e:
         print(f"Failed to create new customer. Error: {str(e)}")
         return False
@@ -159,29 +163,53 @@ def create_load(load: dict) -> bool:
                       'awarD_TO_CHEAPEST': False, 'loadDelivery': [delivery_object], 'loadPickup': [pickup_object]}
 
 
+def insert_all_existing_customers_in_dgltms():
+
+    for letter in string.ascii_lowercase:
+        customers = get_customers_by_query_string(False, letter)
+        for customer in customers:
+            print(f"Trying insert for customer: {customer}")
+            phone = customer['main_phone'] if 'main_phone' in customer and customer['main_phone'] else ''
+            contact = customer['primary_contact'] if 'primary_contact' in customer \
+                                                     and customer['primary_contact'] else ''
+            customer_object = {'name': customer['name'], 'phone': phone,
+                               'contact_person': contact, 'externaL_id': customer['id']}
+
+            address_1 = customer['address1'] if 'address1' in customer and customer['address1'] else ''
+            address_2 = customer['address2'] if 'address2' in customer and customer['address2'] else ''
+            city = customer['city'] if 'city' in customer and customer['city'] else ''
+            state = customer['state_id'] if 'state_id' in customer and customer['state_id'] else ''
+            zip_code = customer['zip_code'] if 'zip_code' in customer and customer['zip_code'] else ''
+            address_object = {'address_1': address_1, 'address_2': address_2,
+                              'city': city, 'state': state, 'zip_code': zip_code}
+            if not create_customer(customer_object, address_object):
+                print(f"Failed for customer: {customer_object} and address: {address_object}")
+
+
 if __name__ == "__main__":
     # print(get_states())
     # print(get_customer_by_external_id('1234'))
-    address = {
-        'address_1': '3701 Centrella St',
-        'address_2': '',
-        'city': 'FRANKLIN PARK',
-        'zip_code': '60131',
-        'state': 'IL',
-    }
-    customer = {
-        'name': 'Apex Logistics International Inc. - ORD',
-        'phone': '847-640-1818',
-        'contact_person': 'stefanfi',
-        'externaL_id': 'APEXELIL'
-    }
+    # address = {
+    #     'address_1': '3701 Centrella St',
+    #     'address_2': '',
+    #     'city': 'FRANKLIN PARK',
+    #     'zip_code': '60131',
+    #     'state': 'IL',
+    # }
+    # customer = {
+    #     'name': 'Test Customer - CHI',
+    #     'phone': '847-640-1819',
+    #     'contact_person': 'testperson',
+    #     'externaL_id': 'TESTCUS'
+    # }
     # print(create_customer(customer, address))
-    # print(get_customer_by_external_id('APEXELIL'))
+    print(get_customer_by_external_id('ABCDE'))
     # print(get_load_weight_units())
     # print(get_package_types())
     # print(get_product_types())
     # print(get_pickup_time_types())
-    print(get_vehicle_types())
+    # print(get_vehicle_types())
+    # insert_all_existing_customers_in_dgltms()
 
 
 

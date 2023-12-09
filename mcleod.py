@@ -396,6 +396,26 @@ def get_customer_by_name(is_test: bool, name: str):
     return response.json()
 
 
+def get_customers_by_query_string(is_test: bool, query_string: str) -> list:
+    url = None
+    test_url = "https://dgld.loadtracking.com:5790/ws/customers?q"
+    prod_url = "https://dgld.loadtracking.com/ws/customers?q"
+
+    headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
+    if is_test:
+        url = f"{test_url}={query_string}"
+
+    else:
+        url = f"{prod_url}={query_string}"
+
+    print(f"Searching for customers: {url}")
+    response = requests.get(url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
+                            headers=headers)
+
+    print(f"Customers response is: {response.json()}")
+    return response.json()
+
+
 def save_customer(is_test: bool, name: str):
     """"""
     test_url = "https://dgld.loadtracking.com:5790/ws/customers/create"
