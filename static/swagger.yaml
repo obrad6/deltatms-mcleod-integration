@@ -192,14 +192,13 @@ definitions:
     type: "object"
     required:
       - "name"
-      - "test"
     properties:
-      name:
-        type: "string"
-        example: "Test Customer"
       test:
         type: "boolean"
         example: false
+      name:
+        type: "string"
+        example: "Test Customer"
 
   CreateCustomer200Success:
     type: "object"
@@ -268,6 +267,9 @@ definitions:
       - "pickup_list"
       - "delivery_list"
     properties:
+      test:
+        type: "boolean"
+        example: false
       external_customer_id:
         type: "string"
         example: "TESTCUST"
@@ -298,19 +300,19 @@ definitions:
       - "weight"
       - "package_count"
     properties:
-      pickup_address:
+      address:
         type: "string"
         example: "1555 Lincoln Ave"
-      pickup_city:
+      city:
         type: "string"
         example: "Chicago"
-      pickup_state:
+      state:
         type: "string"
         example: "IL"
-      pickup_country:
+      country:
         type: "string"
         example: "USA"
-      pickup_zip_code:
+      zip_code:
         type: "string"
         example: "60601"
       est_pickup_date_time:
@@ -333,19 +335,19 @@ definitions:
       - "zip_code"
       - "est_deliver_date_time"
     properties:
-      pickup_address:
+      address:
         type: "string"
         example: "606 W Van Alden Ave"
-      pickup_city:
+      city:
         type: "string"
         example: "Chicago"
-      pickup_state:
+      state:
         type: "string"
         example: "IL"
-      pickup_country:
+      country:
         type: "string"
         example: "USA"
-      pickup_zip_code:
+      zip_code:
         type: "string"
         example: "60016"
       est_deliver_date_time:
