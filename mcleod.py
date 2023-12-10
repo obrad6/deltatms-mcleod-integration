@@ -143,7 +143,7 @@ def save_order(pickup_list, delivery_list, is_test, order=None):
                             "address": pickup['pickup_address'],
                             "location_id": pickup_location_id,
                             "sched_arrive_early": sched_arrive_early_pu,
-                            "weight": pickup['weight'],
+                            "weight": convert_kgs_to_lb(pickup['weight']),
                             "cases": pickup['package_count'],
                             "stop_type": "PU"
                         }
@@ -236,10 +236,9 @@ def save_order(pickup_list, delivery_list, is_test, order=None):
         "entered_user_id": "apiuser",
         "consignee_refno": order['billing_number'],
         # "blnum": blnum,
-        "weight": total_weight,
+        "weight": convert_kgs_to_lb(total_weight),
         "pieces": total_pieces_count
     }
-
     response = None
     if is_test:
         print(f"Sending order request object: {request_object} in test: {is_test}")

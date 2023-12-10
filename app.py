@@ -163,6 +163,7 @@ def post_order():
                 }
                 response = make_response(jsonify(response_object))
                 response.status_code = 201
+                return response
         except Exception as e:
             print(f"Error saving order: {str(e)}")
             response_object = {'status_code': 500,

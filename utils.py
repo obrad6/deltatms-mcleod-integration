@@ -154,6 +154,7 @@ def format_date_time_for_mcleod(dt: str) -> str:
 
 def get_mcleod_equipment_type_id(mode: str) ->  str:
     """Get McLeod equipment type id based on the equipment type string received"""
+    print(f"Getting equipment type id for {mode}")
     equipment_type_ids = {"Conestoga": "CN", "Flatbed": "F", "Flatbed Tarps": "FT", "Flatbed Team": "FM", "Reefer": "R",
                           "Reefer Team": "RM", "Sprinter Van": "SPR", "Step Deck": "SD", "Straight Box Truck": "SB",
                           "Van 48": "V", "Van 48 Team": "VM", "Van 53": "V", "Van 53 Team": "VM"}
@@ -164,6 +165,8 @@ def get_mcleod_equipment_type_id(mode: str) ->  str:
 
 def is_team_required_based_on_the_equipment(equipment_type_id: str) -> bool:
     """Get boolean flag if team is required or not based on the McLeod equipment type id."""
+    if len(equipment_type_id) == 1:
+        return False
     if equipment_type_id[-1] == 'M':
         return True
     return False
