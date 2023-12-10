@@ -113,7 +113,7 @@ paths:
           description: "Create order request object."
           required: true
           schema:
-            $ref: "#/definitions/OrderRequest"
+            $ref: "#/definitions/CreateOrderRequest"
       responses:
         201:
           description: "Order successfully created."
@@ -258,7 +258,7 @@ definitions:
         type: "boolean"
         example: false
 
-  OrderRequest:
+  CreateOrderRequest:
     type: "object"
     required:
       - "external_customer_id"
