@@ -2,7 +2,8 @@ import requests
 import json
 import string
 
-from mcleod import get_customer_by_name, get_customers_by_query_string
+from mcleod import get_customer_by_name, get_customers_by_query_string, get_orders_by_status
+from utils import get_delta_status_id_for_mcleod_order_status, get_delta_vehicle_type_id_for_mc_leod_mode
 
 
 def get_states() -> list:
@@ -17,6 +18,37 @@ def get_states() -> list:
         return json.loads(response.text)
     except Exception as e:
         print(f"Failed to retrieve states from Delta TMS. Error: {str(e)}")
+        return []
+
+
+def get_load_statuses() -> list:
+    """"""
+    url = "https://dgltmsapi.azurewebsites.net/api/v1/GetLoadStatuses"
+    try:
+        response = requests.get(url, auth=('Misko', 'VoziM1$k0'))
+
+        if response.status_code != 200:
+            print(f"When trying to return load statuses from Delta TMS, received status code: "
+                  f"{str(response.status_code)}")
+            return []
+        return json.loads(response.text)
+    except Exception as e:
+        print(f"Failed to retrieve load statuses from Delta TMS. Error: {str(e)}")
+        return []
+
+
+def get_vehicle_types() -> list:
+    """"""
+    url = "https://dgltmsapi.azurewebsites.net/api/v1/GetLoadModes"
+    try:
+        response = "https://dgltmsapi.azurewebsites.net/api/v1/GetVehicleTypes"
+        if response.status_code != 200:
+            print(f"When trying to return vehicle types from Delta TMS, received status code: "
+                  f"{str(response.status_code)}")
+            return []
+        return json.loads(response.text)
+    except Exception as e:
+        print(f"Failed to retrieve vehicle types from Delta TMS. Error: {str(e)}")
         return []
 
 
@@ -144,27 +176,8 @@ def create_customer(customer: dict, address: dict) -> bool:
         return False
 
 
-def create_load(load: dict) -> bool:
-    """"""
-    url = f"https://dgltmsapi.azurewebsites.net/api/v1/CreateLoad"
-    headers = {'Content-Type': 'application/json'}
-    if not load:
-        print("Load object must be provided.")
-        return False
-
-    pickup_address = {'addresS_LINE_1': '', 'addresS_LINE_2': '', 'city': '', 'statE_ID': 1, 'ziP_CODE': ''}
-    pickup_object = {'loaD_WEIGHT_UNIT_ID': 2, 'loaD_WEIGHT': 12.33, 'packagE_TYPE_ID': 1, 'packagE_COUNT': 123,
-                     'producT_TYPE_ID': 1, 'stackable': True, 'pickuP_TIME_TYPE_ID': 2, 'address': pickup_address}
-
-    delivery_address = {'addresS_LINE_1': '', 'addresS_LINE_2': '', 'city': '', 'statE_ID': 1, 'ziP_CODE': ''}
-    delivery_object = {'deliverY_WORK_HOURS_FROM': '', 'deliverY_WORK_HOURS_TO': '', 'address': delivery_address}
-
-    request_object = {'mC_LOUD_LOAD_ID': '', 'entereD_BY': '', 'approved': True, 'mode': 3, 'repeatable': False,
-                      'awarD_TO_CHEAPEST': False, 'loadDelivery': [delivery_object], 'loadPickup': [pickup_object]}
-
-
 def insert_all_existing_customers_in_dgltms():
-
+    """Insert all existing customers in Delta TMS"""
     for letter in string.ascii_lowercase:
         customers = get_customers_by_query_string(False, letter)
         for customer in customers:
@@ -186,6 +199,57 @@ def insert_all_existing_customers_in_dgltms():
                 print(f"Failed for customer: {customer_object} and address: {address_object}")
 
 
+def create_load(load: dict) -> bool:
+    """"""
+    url = f"https://dgltmsapi.azurewebsites.net/api/v1/CreateLoad"
+    headers = {'Content-Type': 'application/json'}
+    if not load:
+        print("Load object must be provided.")
+        return False
+
+    pickup_address = {'addresS_LINE_1': '', 'addresS_LINE_2': '', 'city': '', 'statE_ID': 1, 'ziP_CODE': ''}
+    pickup_object = {'loaD_WEIGHT_UNIT_ID': 2, 'loaD_WEIGHT': 12.33, 'packagE_TYPE_ID': 1, 'packagE_COUNT': 123,
+                     'producT_TYPE_ID': 1, 'stackable': True, 'pickuP_TIME_TYPE_ID': 2, 'address': pickup_address}
+
+    delivery_address = {'addresS_LINE_1': '', 'addresS_LINE_2': '', 'city': '', 'statE_ID': 1, 'ziP_CODE': ''}
+    delivery_object = {'deliverY_WORK_HOURS_FROM': '', 'deliverY_WORK_HOURS_TO': '', 'address': delivery_address}
+
+    request_object = {'mC_LOUD_LOAD_ID': '', 'entereD_BY': '', 'approved': True, 'mode': 3, 'repeatable': False,
+                      'awarD_TO_CHEAPEST': False, 'loadDelivery': [delivery_object], 'loadPickup': [pickup_object]}
+
+
+def insert_existing_loads(is_test):
+    """"""
+    statuses = ['C', 'V', 'P', 'A', 'D']
+    for letter in statuses:
+        orders = get_orders_by_status(is_test, letter)
+        if orders and letter == 'A':
+            print(f"Number of orders for status {letter} is: {len(orders)}")
+            for order in orders:
+                load = {
+                    'mC_LOUD_LOAD_ID': order['id'],
+                    'loaD_STATUS_ID': get_delta_status_id_for_mcleod_order_status(order['status']),
+                    'mode': get_delta_vehicle_type_id_for_mc_leod_mode(order['equipment_type_id']),
+                    'entereD_BY': order['id']
+                }
+                print(f"Trying insert for order: {order}")
+
+            # print(f"Trying insert for order: {order}")
+            # pickup_address = {'addresS_LINE_1': '', 'addresS_LINE_2': '', 'city': '', 'statE_ID': 1, 'ziP_CODE': ''}
+            # pickup_object = {'loaD_WEIGHT_UNIT_ID': 2, 'loaD_WEIGHT': 12.33, 'packagE_TYPE_ID': 1, 'packagE_COUNT': 123,
+            #                  'producT_TYPE_ID': 1, 'stackable': True, 'pickuP_TIME_TYPE_ID': 2,
+            #                  'address': pickup_address}
+            #
+            # delivery_address = {'addresS_LINE_1': '', 'addresS_LINE_2': '', 'city': '', 'statE_ID': 1, 'ziP_CODE': ''}
+            # delivery_object = {'deliverY_WORK_HOURS_FROM': '', 'deliverY_WORK_HOURS_TO': '', 'address': delivery_address}
+            #
+            # request_object = {'mC_LOUD_LOAD_ID': '', 'entereD_BY': '', 'approved': True, 'mode': 3, 'repeatable': False,
+            #                   'awarD_TO_CHEAPEST': False, 'loadDelivery': [delivery_object],
+            #                   'loadPickup': [pickup_object]}
+
+
+
+
 if __name__ == "__main__":
     # print(get_states())
     # print(get_customer_by_external_id('1234'))
@@ -203,13 +267,16 @@ if __name__ == "__main__":
     #     'externaL_id': 'TESTCUS'
     # }
     # print(create_customer(customer, address))
-    print(get_customer_by_external_id('ABCDE'))
+    # print(get_customer_by_external_id('ABCDE'))
     # print(get_load_weight_units())
     # print(get_package_types())
     # print(get_product_types())
     # print(get_pickup_time_types())
     # print(get_vehicle_types())
     # insert_all_existing_customers_in_dgltms()
+    # insert_existing_loads(False)
+    # print(get_load_statuses())
+    print(get_vehicle_types())
 
 
 

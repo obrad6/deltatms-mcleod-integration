@@ -152,7 +152,7 @@ def format_date_time_for_mcleod(dt: str) -> str:
     return f"{month}/{day}/{year} {time_string}"
 
 
-def get_mcleod_equipment_type_id(mode: str) ->  str:
+def get_mcleod_equipment_type_id(mode: str) -> str:
     """Get McLeod equipment type id based on the equipment type string received"""
     print(f"Getting equipment type id for {mode}")
     equipment_type_ids = {"Conestoga": "CN", "Flatbed": "F", "Flatbed Tarps": "FT", "Flatbed Team": "FM", "Reefer": "R",
@@ -170,3 +170,50 @@ def is_team_required_based_on_the_equipment(equipment_type_id: str) -> bool:
     if equipment_type_id[-1] == 'M':
         return True
     return False
+
+
+def get_delta_status_id_for_mcleod_order_status(order_status: str) -> int:
+    """Get Delta status for a given McLeod order status."""
+    if order_status == 'C':
+        return 2
+    elif order_status == 'V':
+        return 1
+    elif order_status == 'P':
+        return 10
+    elif order_status == 'A':
+        return 1
+    elif order_status == 'D':
+        return 11
+    else:
+        return 0
+
+
+def get_delta_vehicle_type_id_for_mc_leod_mode(mode: str) -> int:
+    """Get Delta vehicle type id for a given McLeod mode."""
+    if mode == 'V':
+        return 3
+    elif mode == 'F':
+        return 1
+    elif mode == 'CN':
+        return 10
+    elif mode == 'FT':
+        return 8
+    elif mode == 'FM':
+        return 9
+    elif mode == 'CN':
+        return 6
+    elif mode == 'R':
+        return 4
+    elif mode == 'RM':
+        return 11
+    elif mode == 'SPR':
+        return 12
+    elif mode == 'SD':
+        return 14
+    elif mode == 'SB':
+        return 13
+    elif mode == 'VM':
+        return 6
+    else:
+        return 0
+

@@ -45,6 +45,7 @@ def login():
 def post_order():
     """"""
     data = request.get_json()
+    print(f"Received post order request: {data}")
     pickup_list = []
     delivery_list = []
     is_test = True if "test" in data and data["test"] else False

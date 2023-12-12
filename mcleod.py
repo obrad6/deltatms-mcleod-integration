@@ -303,6 +303,20 @@ def get_order(is_test, order_id):
     return order.json()
 
 
+def get_orders_by_status(is_test, status):
+    headers = {'Accept': 'application/json'}
+    url = None
+    if is_test:
+        url = f"https://dgld.loadtracking.com:5790/ws/orders/search?orders.status={status}"
+    else:
+        url = f"https://dgld.loadtracking.com/ws/orders/search?orders.status={status}"
+
+    print(f"{url}")
+    orders = requests.get(url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
+                          headers=headers)
+    return orders.json()
+
+
 def get_edi_partner_code(is_test, reference_number):
     headers = {'Accept': 'application/json'}
     url = None
@@ -403,8 +417,8 @@ def get_customers_by_query_string(is_test: bool, query_string: str) -> list:
     url = None
     test_url = "https://dgld.loadtracking.com:5790/ws/customers?q"
     prod_url = "https://dgld.loadtracking.com/ws/customers?q"
-
     headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
+
     if is_test:
         url = f"{test_url}={query_string}"
 
@@ -443,6 +457,27 @@ def save_customer(is_test: bool, name: str):
     return response.json()
 
 
+def get_users_by_query_string(is_test: bool, query_string: str) -> list:
+    url = None
+    test_url = "https://dgld.loadtracking.com:5790/ws/users/search?"
+    prod_url = "https://dgld.loadtracking.com/ws/users/search?"
+    headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
+
+    if is_test:
+        url = f"{test_url}{query_string}"
+
+    else:
+        url = f"{prod_url}{query_string}"
+
+    print(f"Searching for users: {url}")
+    response = requests.get(url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
+                            headers=headers)
+
+    print(f"Users response is: {response.status_code}")
+    return response.json()
+
+
 if __name__ == "__main__":
     # print(get_customer_by_name(True, "apex logistics international jfk"))
-    print(save_customer(True, "DGLTms Integration Test Customer"))
+    # print(save_customer(True, "DGLTms Integration Test Customer"))
+    print(get_users_by_query_string(False,"users.is_active=Y&orderBy=users.name+DESC"))
