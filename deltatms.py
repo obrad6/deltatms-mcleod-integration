@@ -273,10 +273,10 @@ if __name__ == "__main__":
     # print(get_product_types())
     # print(get_pickup_time_types())
     # print(get_vehicle_types())
-    # insert_all_existing_customers_in_dgltms()
+    insert_all_existing_customers_in_dgltms()
     # insert_existing_loads(False)
     # print(get_load_statuses())
-    print(get_vehicle_types())
+    # print(get_vehicle_types())
 
 
 

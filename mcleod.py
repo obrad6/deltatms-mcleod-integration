@@ -181,7 +181,7 @@ def save_order(pickup_list, delivery_list, is_test, order=None):
             print(f"delivery location is: {delivery_location}")
             delivery_city_id = delivery_location['city_id']
             delivery_location_id = delivery_location['id']
-            delivery_location_name = delivery_location[0]['name']
+            delivery_location_name = delivery_location['name']
 
         sched_arrive_early_del = format_date_time_for_mcleod(delivery['delivery_est_dt'])
         delivery_object = {
