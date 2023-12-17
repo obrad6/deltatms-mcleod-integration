@@ -137,6 +137,8 @@ def get_customer_by_external_id(external_id: str) -> dict:
     url = f"https://dgltmsapi.azurewebsites.net/api/v1/GetCustomer?externalID={external_id}"
     try:
         response = requests.get(url, auth=('Misko', 'VoziM1$k0'))
+        if not response:
+            return {}
         return json.loads(response.text)
     except Exception as e:
         print(f"Error: {str(e)} retrieving customer by id: {external_id}")
@@ -164,9 +166,10 @@ def create_customer(customer: dict, address: dict) -> bool:
                           'address': address_object}
         if 'tier' in customer:
             request_object['tier'] = customer['tier']
-        print(f"Sending request: {request_object}")
         if not get_customer_by_external_id(customer['externaL_id']):
+            print(f"Sending request: {request_object}")
             response = requests.post(url, data=json.dumps(request_object), headers=headers, auth=('Misko', 'VoziM1$k0'))
+            print(f"Response of create_customer is: {response.text}")
             if response.status_code != 200:
                 print(f"Failed to create new customer. Response: {response.text}")
                 return False
@@ -178,25 +181,59 @@ def create_customer(customer: dict, address: dict) -> bool:
 
 def insert_all_existing_customers_in_dgltms():
     """Insert all existing customers in Delta TMS"""
+    customers_list = []
     for letter in string.ascii_lowercase:
         customers = get_customers_by_query_string(False, letter)
         for customer in customers:
-            print(f"Trying insert for customer: {customer}")
-            phone = customer['main_phone'] if 'main_phone' in customer and customer['main_phone'] else ''
-            contact = customer['primary_contact'] if 'primary_contact' in customer \
-                                                     and customer['primary_contact'] else ''
-            customer_object = {'name': customer['name'], 'phone': phone,
-                               'contact_person': contact, 'externaL_id': customer['id']}
+            customers_list.append(customer)
+            # print(f"Trying insert for customer: {customer}")
+            # phone = customer['main_phone'] if 'main_phone' in customer and customer['main_phone'] else ''
+            # contact = customer['primary_contact'] if 'primary_contact' in customer \
+            #                                          and customer['primary_contact'] else ''
+            # customer_object = {'name': customer['name'], 'phone': phone,
+            #                    'contact_person': contact, 'externaL_id': customer['id']}
+            #
+            # address_1 = customer['address1'] if 'address1' in customer and customer['address1'] else ''
+            # address_2 = customer['address2'] if 'address2' in customer and customer['address2'] else ''
+            # city = customer['city'] if 'city' in customer and customer['city'] else ''
+            # state = customer['state_id'] if 'state_id' in customer and customer['state_id'] else ''
+            # zip_code = customer['zip_code'] if 'zip_code' in customer and customer['zip_code'] else ''
+            # address_object = {'address_1': address_1, 'address_2': address_2,
+            #                   'city': city, 'state': state, 'zip_code': zip_code}
+            # if not create_customer(customer_object, address_object):
+            #     print(f"Failed for customer: {customer_object} and address: {address_object}")
 
-            address_1 = customer['address1'] if 'address1' in customer and customer['address1'] else ''
-            address_2 = customer['address2'] if 'address2' in customer and customer['address2'] else ''
-            city = customer['city'] if 'city' in customer and customer['city'] else ''
-            state = customer['state_id'] if 'state_id' in customer and customer['state_id'] else ''
-            zip_code = customer['zip_code'] if 'zip_code' in customer and customer['zip_code'] else ''
-            address_object = {'address_1': address_1, 'address_2': address_2,
-                              'city': city, 'state': state, 'zip_code': zip_code}
-            if not create_customer(customer_object, address_object):
-                print(f"Failed for customer: {customer_object} and address: {address_object}")
+    for cust in customers_list:
+        with open('customers.json', 'a') as f:
+            json.dump(cust, f)
+            f.write('\n')
+
+
+def insert_customers_from_json(file_name: str):
+
+    customer_objects = []
+    with open(file_name, 'r') as f:
+        for line in f:
+            if line.strip():
+                customer_objects.append(json.loads(line))
+
+    for customer in customer_objects:
+        print(f"Trying insert for customer: {customer}")
+        phone = customer['main_phone'] if 'main_phone' in customer and customer['main_phone'] else ''
+        contact = customer['primary_contact'] if 'primary_contact' in customer \
+                                                 and customer['primary_contact'] else ''
+        customer_object = {'name': customer['name'], 'phone': phone,
+                           'contact_person': contact, 'externaL_id': customer['id']}
+        address_1 = customer['address1'] if 'address1' in customer and customer['address1'] else ''
+        address_2 = customer['address2'] if 'address2' in customer and customer['address2'] else ''
+        city = customer['city'] if 'city' in customer and customer['city'] else ''
+        state = customer['state_id'] if 'state_id' in customer and customer['state_id'] else ''
+        zip_code = customer['zip_code'] if 'zip_code' in customer and customer['zip_code'] else ''
+        address_object = {'address_1': address_1, 'address_2': address_2,
+                          'city': city, 'state': state, 'zip_code': zip_code}
+        print(f"customer object is: {customer_object} and address object is: {address_object}")
+        create_customer_response = create_customer(customer_object, address_object)
+        print(f"create_customer_response is: {create_customer_response}")
 
 
 def create_load(load: dict) -> bool:
@@ -273,10 +310,11 @@ if __name__ == "__main__":
     # print(get_product_types())
     # print(get_pickup_time_types())
     # print(get_vehicle_types())
-    insert_all_existing_customers_in_dgltms()
+    # insert_all_existing_customers_in_dgltms()
     # insert_existing_loads(False)
     # print(get_load_statuses())
     # print(get_vehicle_types())
+    insert_customers_from_json('customers.json')
 
 
 

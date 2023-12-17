@@ -143,7 +143,7 @@ def save_order(pickup_list, delivery_list, is_test, order=None):
                             "address": pickup['pickup_address'],
                             "location_id": pickup_location_id,
                             "sched_arrive_early": sched_arrive_early_pu,
-                            "weight": convert_kgs_to_lb(pickup['weight']),
+                            "weight": pickup['weight'],
                             "cases": pickup['package_count'],
                             "stop_type": "PU"
                         }
@@ -413,7 +413,7 @@ def get_customer_by_name(is_test: bool, name: str):
     return response.json()
 
 
-def get_customers_by_query_string(is_test: bool, query_string: str) -> list:
+def get_customers_by_query_string(is_test: bool, query_string: str = '') -> list:
     url = None
     test_url = "https://dgld.loadtracking.com:5790/ws/customers?q"
     prod_url = "https://dgld.loadtracking.com/ws/customers?q"
@@ -424,6 +424,9 @@ def get_customers_by_query_string(is_test: bool, query_string: str) -> list:
 
     else:
         url = f"{prod_url}={query_string}"
+
+    if not query_string:
+        url = url[:-4]
 
     print(f"Searching for customers: {url}")
     response = requests.get(url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
