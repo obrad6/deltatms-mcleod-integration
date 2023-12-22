@@ -298,7 +298,9 @@ definitions:
       - "zip_code"
       - "est_pickup_date_time"
       - "weight"
+      - "package_type"
       - "package_count"
+      - "product_type"
     properties:
       address:
         type: "string"
@@ -321,9 +323,15 @@ definitions:
       weight:
         type: number
         example: 42000.50
+      package_type:
+        type: "string"
+        example: "Pallets"
       package_count:
         type: integer
         example: 24
+      product_type:
+        type: "string"
+        example: "Electronics"
 
   Delivery:
     type: "object"

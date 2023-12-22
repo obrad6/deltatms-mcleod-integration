@@ -70,6 +70,8 @@ def post_order():
         pickup_est_dt = pickup['est_pickup_date_time']
         pickup_weight = pickup['weight']
         pickup_package_count = pickup['package_count']
+        pickup_product_type = pickup['product_type']
+        pickup_package_type = pickup['package_type']
 
         # TODO: Figure out bellow fields in DeltaTMS
         # pickup_contact_name = pickup['contactName']
@@ -96,7 +98,9 @@ def post_order():
             'pickup_zip_code': pickup_zip_code,
             'pickup_est_dt': pickup_est_dt,
             'weight': pickup_weight,
-            'package_count': pickup_package_count
+            'package_count': pickup_package_count,
+            'product_type': pickup_product_type,
+            'package_type': pickup_package_type
         }
         pickup_list.append(pickup_object)
 
