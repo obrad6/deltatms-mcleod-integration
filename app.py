@@ -73,14 +73,6 @@ def post_order():
         pickup_product_type = pickup['product_type']
         pickup_package_type = pickup['package_type']
 
-        # TODO: Figure out bellow fields in DeltaTMS
-        # pickup_contact_name = pickup['contactName']
-        # pickup_contact_phone = pickup['contactPhoneNumber']
-        # pickup_contact_email = pickup['contactEmail']
-        # pickup_ref_booking_number = ""
-        # if "refBookingNo" in pickup:
-        #     pickup_ref_booking_number = pickup['refBookingNo']
-
         zip_codes_for_city_state = get_zip_codes_for_city_and_state(pickup_city, pickup_state)
         if pickup_zip_code not in zip_codes_for_city_state:
             response_object = {'status_code': 422, 'data': None,
@@ -112,23 +104,6 @@ def post_order():
         delivery_country = delivery['country']
         delivery_zip_code = delivery['zip_code']
         delivery_est_dt = delivery['est_deliver_date_time']
-
-        #TODO: Figure oout bellow fields in DeltaTMS
-
-        # delivery_do_number = delivery['doNumber']
-        # delivery_instruction = delivery['instruction']
-        # delivery_company = delivery['company']
-        # delivery_bol_url = delivery['bolUrl']
-        # delivery_contact_name = delivery['contactName']
-        # delivery_contact_phone = delivery['contactPhoneNumber']
-        # delivery_contact_email = delivery['contactEmail']
-        # delivery_total_piece_count = delivery['totalPieceCount']
-        # delivery_total_weight_kgs = delivery['totalWeightKgs']
-        # delivery_total_volume_cbm = delivery['totalVolumeCbm']
-        # delivery_dg_notes = delivery['dgNotes']
-        # delivery_remarks = delivery['remarks']
-        # delivery_dn_number = delivery['dnNumber']
-        # delivery_ref_booking_number = delivery['refBookingNo']
 
         delivery_zip_codes_for_city_state = get_zip_codes_for_city_and_state(delivery_city, delivery_state)
         if delivery_zip_code not in delivery_zip_codes_for_city_state:
