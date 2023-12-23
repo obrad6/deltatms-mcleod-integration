@@ -1,7 +1,9 @@
 import requests
 from requests.auth import HTTPBasicAuth
+from app.models.comodity import Commodity
 from utils import get_state_abbreviation, convert_kgs_to_lb, format_date_time_for_mcleod,\
     get_mcleod_equipment_type_id, is_team_required_based_on_the_equipment
+
 
 
 def get_new_location_object(is_test) -> dict:
@@ -188,7 +190,7 @@ def get_mcleod_commodity_id_and_description(pickup_list: list) -> tuple:
     commodity_description = None
     if len(pickup_list) == 1:
         if 'product_type' in pickup_list[0]:
-            commodity = get_commodity_by_product_type(pickup_list[0]['product_type'])
+            commodity = Commodity.get_commodity_by_product_type(pickup_list[0]['product_type'])
             if commodity:
                 commodity_id = commodity['commodity_id']
                 commodity_description = commodity['commodity_description']
@@ -197,7 +199,7 @@ def get_mcleod_commodity_id_and_description(pickup_list: list) -> tuple:
         commodity_descriptions = []
         for pickup in pickup_list:
             if 'product_type' in pickup:
-                commodity = get_commodity_by_product_type(pickup['product_type'])
+                commodity = Commodity.get_commodity_by_product_type(pickup['product_type'])
                 if commodity:
                     commodity_descriptions.append(commodity['commodity_description'])
         commodity_description = ", ".join(commodity_descriptions)
@@ -239,7 +241,6 @@ def save_order(pickup_list, delivery_list, is_test, order=None):
         "revenue_code_id": "NORM",
         "teams_required": teams_required,
         "equipment_type_id": equipment_type_id,
-        # "commodity_id": "ELECTRONI",
         "commodity_id": commodity_id,
         "commodity_description": commodity_description,
         "order_type_id": "SPOT",

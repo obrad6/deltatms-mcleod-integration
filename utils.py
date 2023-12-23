@@ -1,3 +1,7 @@
+import csv
+from app import db
+from app.models.comodity import Commodity
+
 LOCKFILE = "scheduler.lock"
 
 ZIP_CODE_API_KEY = "z1LAdcyZSdn6RKtZrjrYnJFQfiNd88WJJBcjRy2SxhYIcd2xDkUoLJr8J4TKazQP"
@@ -216,4 +220,15 @@ def get_delta_vehicle_type_id_for_mc_leod_mode(mode: str) -> int:
         return 6
     else:
         return 0
+
+
+def insert_commodities_from_csv(filename: str):
+    """Insert commodities from a csv file."""
+    with open(filename, newline='') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            commodity = Commodity(product_type=row['product_type'], commodity_id=row['commodity_id'],
+                                  commodity_description=row['commodity_description'])
+            db.session.add(commodity)
+        db.session.commit()
 
