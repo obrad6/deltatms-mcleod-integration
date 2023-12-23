@@ -88,25 +88,10 @@ def save_new_location(is_test, location):
     return response.json()
 
 
-def save_order(pickup_list, delivery_list, is_test, order=None):
-    test_url = "https://dgld.loadtracking.com:5790/ws/orders/create"
-    prod_url = "https://dgld.loadtracking.com/ws/orders/create"
-
-    headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
-
-    stops = []
-    # stop_comments = {}
-    # reference_numbers = {}
-    # stop_weights = {}
-    # stop_pieces = {}
-
-    total_weight = 0
-    total_pieces_count = 0
-    # PICKUP
+def get_mcleod_pickup_objects_list(pickup_list: list, is_test: bool) -> list:
+    """Iterate over pickup list and create pickup objects list for McLeod API."""
+    list_of_pickups = []
     for pickup in pickup_list:
-        total_weight += pickup['weight']
-        total_pieces_count += pickup['package_count']
-
         pickup_location_id = None
         pickup_city_id = None
         pickup_location = get_location(is_test, pickup['pickup_address'], pickup['pickup_city'],
@@ -137,8 +122,6 @@ def save_order(pickup_list, delivery_list, is_test, order=None):
         pickup_object = {
                             "__type": "stop",
                             "location_name": pickup_location_name,
-                            # "contact_name": pickup.contact_name,
-                            # "phone": pickup.contact_phone,
                             "company_id": "TMS",
                             "address": pickup['pickup_address'],
                             "location_id": pickup_location_id,
@@ -147,17 +130,14 @@ def save_order(pickup_list, delivery_list, is_test, order=None):
                             "cases": pickup['package_count'],
                             "stop_type": "PU"
                         }
-        stops.append(pickup_object)
-        # stop_comment_key = f"{pickup_city_id}{pickup_location_id}"
-        # reference_numbers[stop_comment_key] = pickup.ref_booking_number
-    #
-    # total_weight = 0
-    # total_pieces_count = 0
-    # do_numbers = []
+        list_of_pickups.append(pickup_object)
+    return list_of_pickups
 
-    # DELIVERY
+
+def get_mcleod_delivery_objects_list(delivery_list: list, is_test: bool) -> list:
+    """Iterate over delivery list and create delivery objects list for McLeod API."""
+    list_of_deliveries = []
     for delivery in delivery_list:
-        # do_numbers.append(delivery.do_number)
         delivery_city_id = None
         delivery_location_id = None
         delivery_location = get_location(is_test, delivery['delivery_address'], delivery['delivery_city'],
@@ -194,30 +174,59 @@ def save_order(pickup_list, delivery_list, is_test, order=None):
                                 "location_id": delivery_location_id,
                                 "state": delivery['delivery_state'],
                                 "zip_code": delivery['delivery_zip_code'],
-                                # "contact_name": delivery.contact_name,
-                                # "phone": delivery.contact_phone,
                                 "sched_arrive_early": sched_arrive_early_del,
-                                # "weight": convert_kgs_to_lb(delivery.total_weight_kgs),
-                                # "cases": delivery.total_piece_count,
-                                # "volume": round(delivery.total_volume_cbm, 1),
                                 "stop_type": "SO"
                             }
         print(f"Adding delivery object to stops: {delivery_object}")
-        stops.append(delivery_object)
-        # total_weight += convert_kgs_to_lb(delivery.total_weight_kgs)
-        # total_pieces_count += delivery.total_piece_count
-        # stop_comment_key = f"{delivery_city_id}{delivery_location_id}"
-        # stop_comments[stop_comment_key] = delivery.remarks
-        # reference_numbers[stop_comment_key] = delivery.ref_booking_number
-        # stop_weights[stop_comment_key] = convert_kgs_to_lb(delivery.total_weight_kgs)
-        # stop_pieces[stop_comment_key] = delivery.total_piece_count
-    # teams_required = 'N'
-    # equipment_type_id = 'V'
+        list_of_deliveries.append(delivery_object)
+        return list_of_deliveries
 
-    # if order.driver_type.strip().lower() == "team driver":
-    #     teams_required = 'Y'
-    #     equipment_type_id = 'VM'
-    # blnum = ":".join(do_numbers)
+
+def get_mcleod_commodity_id_and_description(pickup_list: list) -> tuple:
+    """Get McLeod commodity id and description for a given pickup list."""
+    commodity_id = None
+    commodity_description = None
+    if len(pickup_list) == 1:
+        if 'product_type' in pickup_list[0]:
+            commodity = get_commodity_by_product_type(pickup_list[0]['product_type'])
+            if commodity:
+                commodity_id = commodity['commodity_id']
+                commodity_description = commodity['commodity_description']
+    else:
+        commodity_id = "MISCFF"
+        commodity_descriptions = []
+        for pickup in pickup_list:
+            if 'product_type' in pickup:
+                commodity = get_commodity_by_product_type(pickup['product_type'])
+                if commodity:
+                    commodity_descriptions.append(commodity['commodity_description'])
+        commodity_description = ", ".join(commodity_descriptions)
+
+    return commodity_id, commodity_description
+
+
+def save_order(pickup_list, delivery_list, is_test, order=None):
+    test_url = "https://dgld.loadtracking.com:5790/ws/orders/create"
+    prod_url = "https://dgld.loadtracking.com/ws/orders/create"
+
+    headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
+
+    stops = []
+
+    total_weight = 0
+    total_pieces_count = 0
+    # Get pickup stops
+    pickups = get_mcleod_pickup_objects_list(pickup_list, is_test)
+    commodity_id, commodity_description = get_mcleod_commodity_id_and_description(pickup_list)
+    for pickup in pickups:
+        total_weight += pickup['weight']
+        total_pieces_count += pickup['cases']
+        stops.append(pickup)
+
+    # Get delivery stops
+    deliveries = get_mcleod_delivery_objects_list(delivery_list, is_test)
+    for delivery in deliveries:
+        stops.append(delivery)
 
     equipment_type_id = get_mcleod_equipment_type_id(order['mode'])
     teams_required = 'Y' if is_team_required_based_on_the_equipment(equipment_type_id) else 'N'
@@ -231,11 +240,12 @@ def save_order(pickup_list, delivery_list, is_test, order=None):
         "teams_required": teams_required,
         "equipment_type_id": equipment_type_id,
         # "commodity_id": "ELECTRONI",
+        "commodity_id": commodity_id,
+        "commodity_description": commodity_description,
         "order_type_id": "SPOT",
         "stops": stops,
         "entered_user_id": "apiuser",
         "consignee_refno": order['billing_number'],
-        # "blnum": blnum,
         "weight": convert_kgs_to_lb(total_weight),
         "pieces": total_pieces_count
     }
@@ -245,16 +255,11 @@ def save_order(pickup_list, delivery_list, is_test, order=None):
         response = requests.put(test_url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
                                 headers=headers, json=request_object)
         print(f"Response for save order is: {response.text} in test: {is_test}")
-        # save_delivery_notes(response, stop_comments, is_test)
-        # save_reference_number(response, reference_numbers, stop_weights, stop_pieces, is_test)
     else:
         print(f"Sending order request object: {request_object} in test: {is_test}")
         response = requests.put(prod_url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
                                 headers=headers, json=request_object)
         print(f"Response for save order is: {response.text} in test: {is_test}")
-        # save_delivery_notes(response, stop_comments, is_test)
-        # save_reference_number(response, reference_numbers, stop_weights, stop_pieces, is_test)
-
     return response.json()
 
 
