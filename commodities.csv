@@ -1,1 +1,20 @@
-Product Type, Commodity ID, Commodity Description
+product_type,commodity_id,commodity_description
+Electronics,ELECTRONI,ELECTRONICS
+Machine Parts,MACHEQ,MACHINE EQUIPMENT
+Food Products,FOODPRO,FOOD PRODUCTS
+Plastic,PLASTIC,PLASTIC COMPONENTS
+Freight Of All Kinds,FAK,FREIGHT OF ALL KINDS
+Auto Parts,AUTO,AUTO PARTS
+Beverage,BEVERA,BEVERAGE
+Clothing,CLOTH,CLOTHING PRODUCT
+Construction Material,NA,NA
+Empty pallets and racks,PALLETS,PALLETS
+Equipment,EQIPAR,EQUIPMENT AND PARTS
+Furniture,FURN,FURNATURE
+Lumber,LUMBER,LUMBER
+Packaging,PACKMAT,PACKAGING MATERIAL
+Paper products,PAPERPROD,PAPER PRODUCTS
+Pharmacy,PHARMA,PHARMA
+Recycling,RECYCLE,RECYCLED GOODS
+Toys,TOYS,TOYS
+

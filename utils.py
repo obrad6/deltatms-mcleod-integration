@@ -1,5 +1,5 @@
 import csv
-from app import db
+from app import initialize_app, db
 from app.models.comodity import Commodity
 
 LOCKFILE = "scheduler.lock"
@@ -224,11 +224,19 @@ def get_delta_vehicle_type_id_for_mc_leod_mode(mode: str) -> int:
 
 def insert_commodities_from_csv(filename: str):
     """Insert commodities from a csv file."""
-    with open(filename, newline='') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            commodity = Commodity(product_type=row['product_type'], commodity_id=row['commodity_id'],
-                                  commodity_description=row['commodity_description'])
-            db.session.add(commodity)
-        db.session.commit()
+    with initialize_app().app_context():
+        with open(filename, newline='') as csvfile:
+            # next(csvfile)
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                # print(f"row is: {row} and type is: {type(row)}")
+                commodity = Commodity(product_type=row['product_type'], commodity_id=row['commodity_id'],
+                                      commodity_description=row['commodity_description'])
+                print(commodity.__repr__())
+                db.session.add(commodity)
+            db.session.commit()
+
+
+if __name__ == '__main__':
+    insert_commodities_from_csv('commodities.csv')
 
