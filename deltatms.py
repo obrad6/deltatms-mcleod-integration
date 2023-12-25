@@ -2,8 +2,23 @@ import requests
 import json
 import string
 
-from mcleod import get_customer_by_name, get_customers_by_query_string, get_orders_by_status
+from mcleod import get_customers_by_query_string, get_orders_by_status
 from utils import get_delta_status_id_for_mcleod_order_status, get_delta_vehicle_type_id_for_mc_leod_mode
+from app.models.load import Load
+
+
+def get_users() -> list:
+    """Get all users from Delta TMS."""
+    url = "https://dgltmsapi.azurewebsites.net/api/v1/GetUsers"
+    try:
+        response = requests.get(url, auth=('Misko', 'VoziM1$k0'))
+        if response.status_code != 200:
+            print(f"When trying to return users from Delta TMS, received status code: {str(response.status_code)}")
+            return []
+        return json.loads(response.text)
+    except Exception as e:
+        print(f"Failed to retrieve users from Delta TMS. Error: {str(e)}")
+        return []
 
 
 def get_states() -> list:
@@ -22,7 +37,7 @@ def get_states() -> list:
 
 
 def get_load_statuses() -> list:
-    """"""
+    """Get all load statuses from Delta TMS."""
     url = "https://dgltmsapi.azurewebsites.net/api/v1/GetLoadStatuses"
     try:
         response = requests.get(url, auth=('Misko', 'VoziM1$k0'))
@@ -34,21 +49,6 @@ def get_load_statuses() -> list:
         return json.loads(response.text)
     except Exception as e:
         print(f"Failed to retrieve load statuses from Delta TMS. Error: {str(e)}")
-        return []
-
-
-def get_vehicle_types() -> list:
-    """"""
-    url = "https://dgltmsapi.azurewebsites.net/api/v1/GetLoadModes"
-    try:
-        response = "https://dgltmsapi.azurewebsites.net/api/v1/GetVehicleTypes"
-        if response.status_code != 200:
-            print(f"When trying to return vehicle types from Delta TMS, received status code: "
-                  f"{str(response.status_code)}")
-            return []
-        return json.loads(response.text)
-    except Exception as e:
-        print(f"Failed to retrieve vehicle types from Delta TMS. Error: {str(e)}")
         return []
 
 
@@ -137,7 +137,7 @@ def get_customer_by_external_id(external_id: str) -> dict:
     url = f"https://dgltmsapi.azurewebsites.net/api/v1/GetCustomer?externalID={external_id}"
     try:
         response = requests.get(url, auth=('Misko', 'VoziM1$k0'))
-        if not response:
+        if not response.text:
             return {}
         return json.loads(response.text)
     except Exception as e:
@@ -145,13 +145,13 @@ def get_customer_by_external_id(external_id: str) -> dict:
         return {}
 
 
-def create_customer(customer: dict, address: dict) -> bool:
+def create_customer(customer: dict, address: dict) -> tuple:
     """"""
     url = f"https://dgltmsapi.azurewebsites.net/api/v1/CreateCustomer"
     headers = {'Content-Type': 'application/json'}
     if not customer or not address:
         print("Customer and Address objects must be provided.")
-        return False
+        return False, None
     try:
         states = get_states()
         address_object = {'addresS_LINE_1': address['address_1'], 'addresS_LINE_2': address['address_2'],
@@ -172,11 +172,11 @@ def create_customer(customer: dict, address: dict) -> bool:
             print(f"Response of create_customer is: {response.text}")
             if response.status_code != 200:
                 print(f"Failed to create new customer. Response: {response.text}")
-                return False
-            return True
+                return False, None
+            return True, json.loads(response.text)
     except Exception as e:
         print(f"Failed to create new customer. Error: {str(e)}")
-        return False
+        return False, None
 
 
 def insert_all_existing_customers_in_dgltms():
@@ -236,23 +236,24 @@ def insert_customers_from_json(file_name: str):
         print(f"create_customer_response is: {create_customer_response}")
 
 
-def create_load(load: dict) -> bool:
+def create_load(load_request: dict) -> tuple:
     """"""
     url = f"https://dgltmsapi.azurewebsites.net/api/v1/CreateLoad"
     headers = {'Content-Type': 'application/json'}
-    if not load:
+    if not load_request:
         print("Load object must be provided.")
-        return False
-
-    pickup_address = {'addresS_LINE_1': '', 'addresS_LINE_2': '', 'city': '', 'statE_ID': 1, 'ziP_CODE': ''}
-    pickup_object = {'loaD_WEIGHT_UNIT_ID': 2, 'loaD_WEIGHT': 12.33, 'packagE_TYPE_ID': 1, 'packagE_COUNT': 123,
-                     'producT_TYPE_ID': 1, 'stackable': True, 'pickuP_TIME_TYPE_ID': 2, 'address': pickup_address}
-
-    delivery_address = {'addresS_LINE_1': '', 'addresS_LINE_2': '', 'city': '', 'statE_ID': 1, 'ziP_CODE': ''}
-    delivery_object = {'deliverY_WORK_HOURS_FROM': '', 'deliverY_WORK_HOURS_TO': '', 'address': delivery_address}
-
-    request_object = {'mC_LOUD_LOAD_ID': '', 'entereD_BY': '', 'approved': True, 'mode': 3, 'repeatable': False,
-                      'awarD_TO_CHEAPEST': False, 'loadDelivery': [delivery_object], 'loadPickup': [pickup_object]}
+        return False, None
+    try:
+        response = requests.post(url, data=json.dumps(load_request), headers=headers, auth=('Misko', 'VoziM1$k0'))
+        print(f"Response of create_load is: {response.text}")
+        if response.status_code != 200:
+            print(f"Failed to create new load. Response: {response.text}")
+            return False, None
+        saved_load = json.loads(response.text)
+        return True, saved_load
+    except Exception as e:
+        print(f"Failed to create new load. Error: {str(e)}")
+        return False, None
 
 
 def insert_existing_loads(is_test):
@@ -285,8 +286,6 @@ def insert_existing_loads(is_test):
             #                   'loadPickup': [pickup_object]}
 
 
-
-
 if __name__ == "__main__":
     # print(get_states())
     # print(get_customer_by_external_id('1234'))
@@ -304,7 +303,7 @@ if __name__ == "__main__":
     #     'externaL_id': 'TESTCUS'
     # }
     # print(create_customer(customer, address))
-    # print(get_customer_by_external_id('ABCDE'))
+    print(get_customer_by_external_id('APEXLIL'))
     # print(get_load_weight_units())
     # print(get_package_types())
     # print(get_product_types())
@@ -314,7 +313,8 @@ if __name__ == "__main__":
     # insert_existing_loads(False)
     # print(get_load_statuses())
     # print(get_vehicle_types())
-    insert_customers_from_json('customers.json')
+    # insert_customers_from_json('customers.json')
+    # print(get_users())
 
 
 

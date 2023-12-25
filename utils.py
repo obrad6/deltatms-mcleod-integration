@@ -67,6 +67,17 @@ STATES = {
     "Wyoming": "WY"
 }
 
+STATE_IDS = {
+    'AL': 1, 'AK': 2, 'AZ': 3, 'AR': 4, 'CA': 5, 'CO': 6, 'CT': 7, 'DE': 8,
+    'DC': 9, 'FL': 10, 'GA': 11, 'HI': 12, 'ID': 13, 'IL': 14, 'IN': 15,
+    'IA': 16, 'KS': 17, 'KY': 18, 'LA': 19, 'ME': 20, 'MD': 21, 'MA': 22,
+    'MI': 23, 'MN': 24, 'MS': 25, 'MO': 26, 'MT': 27, 'NE': 28, 'NV': 29,
+    'NH': 30, 'NJ': 31, 'NM': 32, 'NY': 33, 'NC': 34, 'ND': 35, 'OH': 36,
+    'OK': 37, 'OR': 38, 'PA': 39, 'PR': 40, 'RI': 41, 'SC': 42, 'SD': 43,
+    'TN': 44, 'TX': 45, 'UT': 46, 'VT': 47, 'VA': 48, 'WA': 49, 'WV': 50,
+    'WI': 51, 'WY': 52
+}
+
 
 def pickup_valid(location: dict) -> bool:
     """Check if pickup is valid."""
@@ -220,6 +231,22 @@ def get_delta_vehicle_type_id_for_mc_leod_mode(mode: str) -> int:
         return 6
     else:
         return 0
+
+
+def get_delta_state_id_for_mcleod_state(state: str) -> int:
+    """Get Delta state id for a given McLeod state."""
+    return STATE_IDS[state]
+
+
+def get_delta_work_hours_for_delivery(arrival_time: str) -> tuple:
+    """Get Delta work hours for a given McLeod arrival time."""
+    date_arrival = arrival_time[:8]
+    year = date_arrival[:4]
+    month = date_arrival[4:6]
+    day = date_arrival[6:]
+    work_hours_from = f"{year}-{month}-{day}T00:00"
+    work_hours_to = f"{year}-{month}-{day}T00:00"
+    return work_hours_from, work_hours_to
 
 
 def insert_commodities_from_csv(filename: str):

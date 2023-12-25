@@ -1,9 +1,9 @@
 import requests
 from requests.auth import HTTPBasicAuth
 from app.models.comodity import Commodity
+from app.models.load import Load
 from utils import get_state_abbreviation, convert_kgs_to_lb, format_date_time_for_mcleod,\
     get_mcleod_equipment_type_id, is_team_required_based_on_the_equipment
-
 
 
 def get_new_location_object(is_test) -> dict:
@@ -306,7 +306,7 @@ def get_order(is_test, order_id):
         url = f"https://dgld.loadtracking.com/ws/orders/{order_id}"
         order = requests.get(url, auth=HTTPBasicAuth("apiuser", "dgldapiuser"),
                              headers=headers)
-    return order.json()
+    return order.json() if order.text else None
 
 
 def get_orders_by_status(is_test, status):

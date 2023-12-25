@@ -23,4 +23,8 @@ class Commodity(db.Model):
     def get_commodity_by_product_type(cls, product_type):
         return cls.query.filter_by(product_type=product_type).first()
 
+    @classmethod
+    def get_commodity_by_commodity_id(cls, commodity_id):
+        return cls.query.filter_by(commodity_id=commodity_id).first()
+
 
